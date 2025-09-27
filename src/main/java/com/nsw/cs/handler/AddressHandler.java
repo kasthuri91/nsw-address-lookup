@@ -59,7 +59,8 @@ public class AddressHandler implements RequestHandler<APIGatewayV2HTTPEvent, API
             System.out.println("Extract Address");
             // Extract and validate the 'address' query parameter.
             String address = event.getQueryStringParameters().get("address");
-            if (address == null || address.isEmpty()) {
+            System.out.println("address: "+address);
+            if (address == null || address.isBlank()) {
                 response.setStatusCode(400);
                 response.setBody("{\"error\":\"'address' query parameter is required\"}");
                 return response;
