@@ -26,7 +26,7 @@ You can directly test the deployed Lambda using its **Function URL**:
 curl "https://al37setg3p6tsobidtfoweygee0uwcge.lambda-url.ap-southeast-2.on.aws/?address=346 PANORAMA AVENUE BATHURST"
 ```
 ### 2. Local Unit Tests
-Unit 5 test cases have been written to validate the Lambda handler and NSW API client logic.
+Unit test cases have been written to validate the Lambda handler and NSW API client logic.
 These tests check:
 
 ✅ Valid address lookup returns suburb, district, and coordinates
