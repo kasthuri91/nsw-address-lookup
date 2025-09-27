@@ -51,7 +51,7 @@ public class AddressApiClient {
         JsonNode features = adderRoot.path("features");
         if (!features.isArray() || features.isEmpty()) {
             System.out.println("Address features not found");
-            throw new NoSuchElementException("Address features not found");
+            throw new NoSuchElementException("Invalid Address");
         }
 
         // Take the first feature and read its coordinates from geometry.
