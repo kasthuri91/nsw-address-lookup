@@ -25,6 +25,7 @@ public class AddressHandlerTest {
         var event = new APIGatewayV2HTTPEvent();
         var ctx = mock(Context.class);
         var resp = new AddressHandler().handleRequest(event, ctx);
+        System.out.println(resp.getBody());
         assertEquals(400, resp.getStatusCode());
     }
 
@@ -35,6 +36,7 @@ public class AddressHandlerTest {
 
         var ctx = mock(Context.class);
         var resp = new AddressHandler().handleRequest(event, ctx);
+        System.out.println(resp.getBody());
         assertEquals(404, resp.getStatusCode());
     }
     @Test
@@ -43,6 +45,7 @@ public class AddressHandlerTest {
         event.setQueryStringParameters(Map.of("address", ""));
         var ctx = mock(Context.class);
         var resp = new AddressHandler().handleRequest(event, ctx);
+        System.out.println(resp.getBody());
         assertEquals(400, resp.getStatusCode());
     }
 

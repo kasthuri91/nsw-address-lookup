@@ -70,13 +70,14 @@ public class AddressHandler implements RequestHandler<APIGatewayV2HTTPEvent, API
             //Success, set response status 200 and return the json which contains district,coordinates and address
             response.setStatusCode(200);
             response.setBody(json);
+            System.out.println("Response : " + json);
             return response;
 
         } catch (NoSuchElementException notFound) {
             // Upstream could not find coordinates or district for the address.
             System.out.println("Error : not found " + notFound);
             response.setStatusCode(404);
-            response.setBody("{\"error\":\"Coordinates or district not found\"}");
+            response.setBody("{\"error\":\""+notFound.getLocalizedMessage()+"\"}");
             return response;
 
         } catch (HttpTimeoutException timeout) {

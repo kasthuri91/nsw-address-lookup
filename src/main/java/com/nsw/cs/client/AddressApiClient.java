@@ -51,7 +51,7 @@ public class AddressApiClient {
         JsonNode features = adderRoot.path("features");
         if (!features.isArray() || features.isEmpty()) {
             System.out.println("Address features not found");
-            throw new NoSuchElementException("No features");
+            throw new NoSuchElementException("Address features not found");
         }
 
         // Take the first feature and read its coordinates from geometry.
@@ -59,7 +59,7 @@ public class AddressApiClient {
         JsonNode coordinates = firstFeature.path("geometry").path("coordinates");
         if (!coordinates.isArray() || coordinates.size() < 2) {
             System.out.println("No coordinates found");
-            throw new NoSuchElementException("No coordinates");
+            throw new NoSuchElementException("No coordinates found");
         }
 
         double x = coordinates.get(0).asDouble();
@@ -73,8 +73,8 @@ public class AddressApiClient {
         JsonNode disRoot = MAPPER.readTree(boundariesBody);
         JsonNode disFeatures = disRoot.path("features");
         if (!disFeatures.isArray() || disFeatures.isEmpty()) {
-            System.out.println("No boundaries features");
-            throw new NoSuchElementException("No features");
+            System.out.println("No boundaries features found");
+            throw new NoSuchElementException("No boundaries features found");
         }
 
         // Extract the district name from the first boundary feature.
@@ -84,19 +84,37 @@ public class AddressApiClient {
                 : null;
         if (district == null || district.isBlank()) {
             System.out.println("District not found");
-            throw new NoSuchElementException("No district");
+            throw new NoSuchElementException("District not found");
         }
 
-        // Extract the suburb from the original address string.
-        String suburb = extractSuburb(address);
+        URI suburbUri = buildSuburbLookupUri(x, y);
+        //Send suburb request to the NSW spatial boundaries api
+        String suburbBody = send(suburbUri);
+
+        JsonNode subRoot = MAPPER.readTree(suburbBody);
+        JsonNode subFeatures = subRoot.path("features");
+        if (!subFeatures.isArray() || subFeatures.isEmpty()) {
+            System.out.println("No suburb features found");
+            throw new NoSuchElementException("No suburb features found");
+        }
+
+        // Extract the suburb name from the first boundary feature.
+        JsonNode suburbProperties = subFeatures.get(0).path("properties");
+        String suburb = suburbProperties.hasNonNull("suburbname")
+                ? suburbProperties.get("suburbname").asText()
+                : null;
+        if (suburb == null || suburb.isBlank()) {
+            System.out.println("Suburb not found");
+            throw new NoSuchElementException("Sunurn not found");
+        }
 
         //Build the final payload (latitude = y, longitude = x).
         Map<String, Object> payload = Map.of(
                 "suburb", suburb,
-                "coordinates", Map.of("latitude", y, "longitude", x),
+                //"coordinates", Map.of("latitude", y, "longitude", x),
+                "coordinates", coordinates,
                 "district", district
         );
-        System.out.println("Response : " + payload);
         return MAPPER.writeValueAsString(payload);
     }
 
@@ -135,6 +153,18 @@ public class AddressApiClient {
         return URI.create(Constants.BOUNDARIES_URL + "?" + query);
     }
 
+    private static URI buildSuburbLookupUri(double lon, double lat) {
+        String coords = lon + "," + lat;
+        String query = "geometry=" + URLEncoder.encode(coords, StandardCharsets.UTF_8) +
+                "&geometryType=esriGeometryPoint" +
+                "&inSR=4326" +
+                "&spatialRel=esriSpatialRelIntersects" +
+                "&outFields=*" +
+                "&returnGeometry=false" +
+                "&f=geojson";
+        return URI.create(Constants.SUBURB_URL + "?" + query);
+    }
+
     /**
      * Send a GET request to the given URI and return the response body as text.
      *
@@ -154,7 +184,6 @@ public class AddressApiClient {
 
         System.out.println("Before sending request to NSW spatial service");
         HttpResponse<String> resp = CLIENT.send(req, HttpResponse.BodyHandlers.ofString());
-        System.out.println("After calling request to NSW spatial service , response : " + resp.body());
 
         int code = resp.statusCode();
         if (code < 200 || code >= 300) {
@@ -162,34 +191,6 @@ public class AddressApiClient {
             throw new IllegalStateException("HTTP " + code + " from " + uri);
         }
         return resp.body();
-    }
-
-    /**
-     * Extract the suburb/locality from an Australian-style address string.
-     * <p>Assumptions:</p>
-     * <ul>
-     *    <li>The street type (e.g., STREET, ROAD) appears before the suburb.</li>
-     *    <li>The address ends with the suburb (optionally followed by state/postcode, which this method ignores).</li>
-     *  </ul>
-     *
-     * @param address
-     * @return suburb
-     */
-    private static String extractSuburb(String address) {
-
-        // Common full street-type words;
-        final String STREET_TYPES =
-                "(?:STREET|ROAD|AVENUE|DRIVE|COURT|CRESCENT|LANE|HIGHWAY|PARADE|PLACE|BOULEVARD|TERRACE|WAY|CLOSE|ESPLANADE)";
-
-        if (address == null || address.isBlank()) {
-            return null;
-        }
-
-        // Normalise whitespace and commas, then remove everything up to the last street type.
-        String sub = address.trim().replace(",", " ").replaceAll("\\s+", " ");
-        sub = sub.replaceFirst("(?i).*\\b" + STREET_TYPES + "\\b\\s+", "");
-
-        return sub.trim();
     }
 
 
