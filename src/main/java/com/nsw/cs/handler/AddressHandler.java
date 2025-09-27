@@ -16,7 +16,7 @@ import java.util.NoSuchElementException;
  *
  * <p>Expects an HTTP API v2 / Function URL event with a query parameter
  * {@code address}. On success, returns a JSON payload containing the
- * district and coordinates for the supplied address.</p>
+ * district, suburb and coordinates for the supplied address.</p>
  */
 public class AddressHandler implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2HTTPResponse> {
 
