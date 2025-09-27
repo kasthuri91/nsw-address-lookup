@@ -17,11 +17,12 @@ The project includes a Lambda handler (`AddressHandler`) that can be triggered v
     "district": "BATHURST"
   }
 
+---
 ## Testing
+
 ### 1. Deployed Lambda
 You can directly test the deployed Lambda using its **Function URL**:
 
-```bash
 curl "https://al37setg3p6tsobidtfoweygee0uwcge.lambda-url.ap-southeast-2.on.aws/?address=346 PANORAMA AVENUE BATHURST"
 
 ### 2. Local Unit Tests
