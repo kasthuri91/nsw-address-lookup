@@ -35,4 +35,7 @@ These tests check:
 
 ❌ Invalid address returns 404
 
+❌ Unexpected error returns 500
+
+
   
