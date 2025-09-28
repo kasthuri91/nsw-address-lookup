@@ -2,6 +2,8 @@ package com.nsw.cs.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nsw.cs.Exception.HttpClientException;
+import com.nsw.cs.Exception.HttpServerException;
 import com.nsw.cs.util.Constants;
 
 import javax.net.ssl.SSLException;
@@ -177,7 +179,7 @@ public class AddressApiClient {
      * @throws InterruptedException
      * @throws HttpTimeoutException
      */
-    private static String send(URI uri) throws IOException, InterruptedException, HttpTimeoutException{
+    private static String send(URI uri) throws IOException, InterruptedException, HttpTimeoutException {
 
         try {
             HttpRequest req = HttpRequest.newBuilder()
@@ -191,9 +193,11 @@ public class AddressApiClient {
             HttpResponse<String> resp = CLIENT.send(req, HttpResponse.BodyHandlers.ofString());
 
             int code = resp.statusCode();
-            if (code != 200) {
-                System.out.println("Unexpected response code:" + code);
-                throw new IOException("HTTP " + code + " from " + uri);
+            if (code >= 400 && code < 500) {
+                throw new HttpClientException("Client error: HTTP " + code + " from " + uri, code);
+            }
+            if (code >= 500) {
+                throw new HttpServerException("Spatial Server error: HTTP " + code + " from " + uri, code);
             }
             return resp.body();
         } catch (HttpTimeoutException httpTimeoutException) {

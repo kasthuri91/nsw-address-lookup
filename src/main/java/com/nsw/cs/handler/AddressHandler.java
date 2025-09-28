@@ -4,6 +4,8 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse;
+import com.nsw.cs.Exception.HttpClientException;
+import com.nsw.cs.Exception.HttpServerException;
 import com.nsw.cs.client.AddressApiClient;
 
 import java.net.ConnectException;
@@ -31,8 +33,10 @@ public class AddressHandler implements RequestHandler<APIGatewayV2HTTPEvent, API
     /**
      * Single, reusable API client instance (final to avoid reassignment).
      */
-    private final AddressApiClient client = new AddressApiClient();
+    private final AddressApiClient client;
 
+    public AddressHandler() { this(new AddressApiClient()); }
+    public AddressHandler(AddressApiClient client) { this.client = client; }
     /**
      * Handles the incoming request.
      *
@@ -60,7 +64,7 @@ public class AddressHandler implements RequestHandler<APIGatewayV2HTTPEvent, API
             System.out.println("Extract Address");
             // Extract and validate the 'address' query parameter.
             String address = event.getQueryStringParameters().get("address");
-            System.out.println("address: "+address);
+            System.out.println("address: " + address);
             if (address == null || address.isBlank()) {
                 response.setStatusCode(400);
                 response.setBody("{\"error\":\"'address' query parameter is required\"}");
@@ -76,30 +80,38 @@ public class AddressHandler implements RequestHandler<APIGatewayV2HTTPEvent, API
 
         } catch (NoSuchElementException notFound) {
             // Spatial API could not find coordinates or district for the address.
-            System.out.println("Error : not found " + notFound);
+            System.out.println("Error : not found " + notFound.getLocalizedMessage());
             response.setStatusCode(404);
-            response.setBody("{\"error\":\""+notFound.getLocalizedMessage()+"\"}");
+            response.setBody("{\"error\":\"" + notFound.getLocalizedMessage() + "\"}");
             return response;
 
         } catch (HttpTimeoutException timeout) {
             // Spatial call timed out.
-            System.out.println("Error : timeout " + timeout);
             response.setStatusCode(504);
             response.setBody("{\"error\":\"Spatial API timed out\"}");
             return response;
 
         } catch (ConnectException connectException) {
             // Connection error.
-            System.out.println("Error :  " + connectException);
             response.setStatusCode(502);
-            response.setBody("{\"error\":\"Connection error:"+connectException+"\"}");
+            response.setBody("{\"error\":\"Connection error:" + connectException + "\"}");
+            return response;
+        } catch (HttpServerException serverException) {
+            //Spatial API returned with server error
+            response.setStatusCode(502);
+            response.setBody("{\"error\":\"" + serverException.getLocalizedMessage() + "\"}");
             return response;
 
-        }catch (Exception e) {
+        } catch (HttpClientException clientException) {
+            //Spatial API returned with client error
+            response.setStatusCode(400);
+            response.setBody("{\"error\":\"" + clientException.getLocalizedMessage() + "\"}");
+            return response;
+
+        } catch (Exception e) {
             // Unexpected Spatial API/processing error.
-            System.out.println("Error :  " + e);
-            response.setStatusCode(502);
-            response.setBody("{\"error\":\"Unexpected error:"+e+"\"}");
+            response.setStatusCode(500);
+            response.setBody("{\"error\":\"Unexpected error:" + e.getLocalizedMessage() + "\"}");
             return response;
         }
     }
