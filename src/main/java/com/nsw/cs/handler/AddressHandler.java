@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse;
 import com.nsw.cs.client.AddressApiClient;
 
+import java.net.ConnectException;
 import java.net.http.HttpTimeoutException;
 import java.util.HashMap;
 import java.util.Map;
@@ -71,28 +72,34 @@ public class AddressHandler implements RequestHandler<APIGatewayV2HTTPEvent, API
             //Success, set response status 200 and return the json which contains district,coordinates and address
             response.setStatusCode(200);
             response.setBody(json);
-            System.out.println("Response : " + json);
             return response;
 
         } catch (NoSuchElementException notFound) {
-            // Upstream could not find coordinates or district for the address.
+            // Spatial API could not find coordinates or district for the address.
             System.out.println("Error : not found " + notFound);
             response.setStatusCode(404);
             response.setBody("{\"error\":\""+notFound.getLocalizedMessage()+"\"}");
             return response;
 
         } catch (HttpTimeoutException timeout) {
-            // Upstream call timed out.
+            // Spatial call timed out.
             System.out.println("Error : timeout " + timeout);
             response.setStatusCode(504);
-            response.setBody("{\"error\":\"Upstream timed out\"}");
+            response.setBody("{\"error\":\"Spatial API timed out\"}");
             return response;
 
-        } catch (Exception e) {
-            // Unexpected upstream/processing error.
+        } catch (ConnectException connectException) {
+            // Connection error.
+            System.out.println("Error :  " + connectException);
+            response.setStatusCode(502);
+            response.setBody("{\"error\":\"Connection error:"+connectException+"\"}");
+            return response;
+
+        }catch (Exception e) {
+            // Unexpected Spatial API/processing error.
             System.out.println("Error :  " + e);
             response.setStatusCode(502);
-            response.setBody("{\"error\":\"Unexpected error\"}");
+            response.setBody("{\"error\":\"Unexpected error:"+e+"\"}");
             return response;
         }
     }

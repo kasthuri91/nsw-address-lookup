@@ -4,9 +4,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nsw.cs.util.Constants;
 
+import javax.net.ssl.SSLException;
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.URI;
 import java.net.URLEncoder;
+import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -110,10 +113,10 @@ public class AddressApiClient {
 
         //Build the final payload (latitude = y, longitude = x).
         Map<String, Object> payload = Map.of(
-                "suburb", suburb,
-                //"coordinates", Map.of("latitude", y, "longitude", x),
-                "coordinates", coordinates,
-                "district", district
+                "suburbName", suburb,
+                "location", Map.of("latitude", y, "longitude", x),
+                //"location", coordinates,
+                "districtName", district
         );
         return MAPPER.writeValueAsString(payload);
     }
@@ -174,24 +177,33 @@ public class AddressApiClient {
      * @throws InterruptedException
      * @throws HttpTimeoutException
      */
-    private static String send(URI uri) throws IOException, InterruptedException, HttpTimeoutException {
-        HttpRequest req = HttpRequest.newBuilder()
-                .uri(uri)
-                .timeout(REQ_TIMEOUT)
-                .header("Accept", "application/json")
-                .GET()
-                .build();
+    private static String send(URI uri) throws IOException, InterruptedException, HttpTimeoutException{
 
-        System.out.println("Before sending request to NSW spatial service");
-        HttpResponse<String> resp = CLIENT.send(req, HttpResponse.BodyHandlers.ofString());
+        try {
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(uri)
+                    .timeout(REQ_TIMEOUT)
+                    .header("Accept", "application/json")
+                    .GET()
+                    .build();
 
-        int code = resp.statusCode();
-        if (code < 200 || code >= 300) {
-            System.out.println("IllegalStateException code:" + code);
-            throw new IllegalStateException("HTTP " + code + " from " + uri);
+            System.out.println("Before sending request to NSW spatial service");
+            HttpResponse<String> resp = CLIENT.send(req, HttpResponse.BodyHandlers.ofString());
+
+            int code = resp.statusCode();
+            if (code != 200) {
+                System.out.println("Unexpected response code:" + code);
+                throw new IOException("HTTP " + code + " from " + uri);
+            }
+            return resp.body();
+        } catch (HttpTimeoutException httpTimeoutException) {
+            System.out.println("Spatial API timed out : " + httpTimeoutException.getLocalizedMessage());
+            throw new HttpTimeoutException("Spatial API timed out");
+        } catch (ConnectException | SSLException | UnknownHostException e) {
+            System.out.println("Connection error : " + e.getLocalizedMessage());
+            throw new ConnectException("Issue with connecting Spatial API : " + e.getLocalizedMessage());
         }
-        return resp.body();
-    }
 
+    }
 
 }

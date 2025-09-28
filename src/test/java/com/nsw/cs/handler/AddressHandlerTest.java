@@ -17,6 +17,7 @@ public class AddressHandlerTest {
         event.setQueryStringParameters(Map.of("address", "346 PANORAMA AVENUE BATHURST"));
         var ctx = mock(Context.class);
         var resp = new AddressHandler().handleRequest(event, ctx);
+        System.out.println(resp.getBody());
         assertEquals(200, resp.getStatusCode());
     }
 
